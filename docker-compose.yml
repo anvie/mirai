@@ -12,8 +12,15 @@ services:
       - "${PORT:-4000}:${PORT:-4000}"
     env_file:
       - ./data/.env
+    environment:
+      - MIX_ENV=${MIX_ENV:-dev}
     command: >
       sh -c "mix local.hex --force && 
              mix local.rebar --force && 
-             mix deps.get && 
-             mix run --no-halt"
+             mix deps.get &&
+             if [ \"$$MIX_ENV\" = 'dev' ]; then
+               apt-get update -qq && apt-get install -y -qq inotify-tools > /dev/null 2>&1;
+               iex -S mix run --no-halt;
+             else
+               mix run --no-halt;
+             fi"

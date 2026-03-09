@@ -7,6 +7,7 @@ defmodule Mirai.Application do
 
   @impl true
   def start(_type, _args) do
+    print_banner()
     Mirai.UserPrefs.init()
 
     children = [
@@ -28,5 +29,23 @@ defmodule Mirai.Application do
     # for other strategies and supported options
     opts = [strategy: :rest_for_one, name: Mirai.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp print_banner do
+    env = Mix.env()
+    hot_reload = if env == :dev, do: "✅ ON (exsync)", else: "❌ OFF"
+    port = System.get_env("PORT") || "4000"
+
+    IO.puts("""
+
+    ╔══════════════════════════════════════════╗
+    ║            🤖 MIRAI ENGINE               ║
+    ╠══════════════════════════════════════════╣
+    ║  Mode:        #{String.pad_trailing(to_string(env), 25)} ║
+    ║  Hot Reload:  #{String.pad_trailing(hot_reload, 25)} ║
+    ║  Port:        #{String.pad_trailing(port, 25)} ║
+    ║  Node:        #{String.pad_trailing(to_string(Node.self()), 25)} ║
+    ╚══════════════════════════════════════════╝
+    """)
   end
 end

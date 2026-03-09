@@ -2,7 +2,7 @@ defmodule Mirai.Tools.Exec do
   @behaviour Mirai.Tools.Tool
 
   @impl true
-  def name, do: "exec"
+  def name, do: "execute_command"
 
   @impl true
   def description, do: "Execute a shell command inside the workspace directory. Use this to run bash commands, list files, compile code, etc."
@@ -26,15 +26,12 @@ defmodule Mirai.Tools.Exec do
   end
 
   @impl true
-  def execute(%{"command" => cmd} = params, context) do
+  def execute(%{"command" => cmd}, context) do
     workspace = Map.get(context, :workspace, "~/.mirai/workspace") |> Path.expand()
-    timeout = Map.get(params, "timeout", 30_000)
 
-    # Note: For production use we'd sanitize environment variables.
     opts = [
       cd: workspace,
-      stderr_to_stdout: true,
-      timeout: timeout
+      stderr_to_stdout: true
     ]
 
     try do

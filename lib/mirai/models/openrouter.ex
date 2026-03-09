@@ -62,14 +62,36 @@ defmodule Mirai.Models.OpenRouter do
             content_blocks = if content && content != "", do: [%{"type" => "text", "text" => content}] ++ content_blocks, else: content_blocks
 
             tool_blocks = Enum.map(tool_calls, fn tc ->
-              args = case Jason.decode(tc["function"]["arguments"]) do
-                {:ok, parsed} -> parsed
+              raw_name = tc["function"]["name"] || ""
+              raw_args = tc["function"]["arguments"] || "{}"
+
+              # Some models put args in the name, e.g. "write_file report.md"
+              # Split and recover
+              {name, extra_arg} = case String.split(raw_name, " ", parts: 2) do
+                [n, extra] -> {n, extra}
+                [n] -> {n, nil}
+              end
+
+              args = case Jason.decode(raw_args) do
+                {:ok, parsed} when is_map(parsed) -> parsed
                 _ -> %{}
               end
+
+              # If model put filename in tool name, try to inject it into args
+              args = if extra_arg && map_size(args) > 0 do
+                cond do
+                  name in ["write_file", "read_file", "send_file"] && !Map.has_key?(args, "path") ->
+                    Map.put(args, "path", extra_arg)
+                  true -> args
+                end
+              else
+                args
+              end
+
               %{
                 "type" => "tool_use",
                 "id" => tc["id"],
-                "name" => tc["function"]["name"],
+                "name" => name,
                 "input" => args
               }
             end)

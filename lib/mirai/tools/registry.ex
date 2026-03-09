@@ -8,6 +8,7 @@ defmodule Mirai.Tools.Registry do
     Mirai.Tools.Exec,
     Mirai.Tools.Read,
     Mirai.Tools.Write,
+    Mirai.Tools.SendFile,
     Mirai.Tools.SessionsSpawn,
     Mirai.Tools.SessionsSend
   ]

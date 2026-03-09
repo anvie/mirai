@@ -44,8 +44,8 @@ defmodule Mirai.Channels.Telegram.Worker do
 
     # ── Slash commands ──
     case parse_command(text) do
-      {:command, cmd, _args} ->
-        handle_command(cmd, chat_id, msg)
+      {:command, cmd, args} ->
+        handle_command(cmd, args, chat_id, msg)
 
       :not_command ->
         # Normal message → route to gateway
@@ -89,7 +89,7 @@ defmodule Mirai.Channels.Telegram.Worker do
 
   # ── Command handlers ──
 
-  defp handle_command("clear", chat_id, msg) do
+  defp handle_command("clear", _args, chat_id, msg) do
     session_key = "agent:main:telegram:direct:#{msg.from.id}"
 
     case Registry.lookup(Mirai.Tools.Registry, {:session, session_key}) do
@@ -101,7 +101,7 @@ defmodule Mirai.Channels.Telegram.Worker do
     end
   end
 
-  defp handle_command("status", chat_id, _msg) do
+  defp handle_command("status", _args, chat_id, _msg) do
     provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
     model = System.get_env("OPENROUTER_MODEL") || "(default)"
     uptime = :erlang.statistics(:wall_clock) |> elem(0) |> div(1000)
@@ -117,13 +117,21 @@ defmodule Mirai.Channels.Telegram.Worker do
     """, parse_mode: "Markdown")
   end
 
-  defp handle_command("model", chat_id, _msg) do
+  defp handle_command("model", [], chat_id, _msg) do
+    # No args → show current model
     provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
     model = System.get_env("OPENROUTER_MODEL") || "(default)"
-    Telegex.send_message(chat_id, "🤖 Provider: `#{provider}`\nModel: `#{model}`", parse_mode: "Markdown")
+    Telegex.send_message(chat_id, "🤖 Provider: `#{provider}`\nModel: `#{model}`\n\n_Tip: /model <name> to switch_", parse_mode: "Markdown")
   end
 
-  defp handle_command("reasoning", chat_id, msg) do
+  defp handle_command("model", args, chat_id, _msg) do
+    # Args provided → set model
+    new_model = Enum.join(args, " ")
+    System.put_env("OPENROUTER_MODEL", new_model)
+    Telegex.send_message(chat_id, "✅ Model switched to: `#{new_model}`", parse_mode: "Markdown")
+  end
+
+  defp handle_command("reasoning", _args, chat_id, msg) do
     user_id = to_string(msg.from.id)
     new_val = Mirai.UserPrefs.toggle(user_id, :reasoning)
     emoji = if new_val, do: "🔍", else: "🔇"
@@ -131,19 +139,20 @@ defmodule Mirai.Channels.Telegram.Worker do
     Telegex.send_message(chat_id, "#{emoji} Reasoning: *#{status}*", parse_mode: "Markdown")
   end
 
-  defp handle_command("help", chat_id, _msg) do
+  defp handle_command("help", _args, chat_id, _msg) do
     Telegex.send_message(chat_id, """
     🤖 *Mirai Commands*
 
     /clear — Clear conversation memory
+    /model — Show current model
+    /model <name> — Switch AI model
     /reasoning — Toggle reasoning view
     /status — Show system status & uptime
-    /model — Show current AI model
     /help — Show this help
     """, parse_mode: "Markdown")
   end
 
-  defp handle_command(unknown, chat_id, _msg) do
+  defp handle_command(unknown, _args, chat_id, _msg) do
     Telegex.send_message(chat_id, "❓ Unknown command: /#{unknown}\nType /help to see available commands.")
   end
 

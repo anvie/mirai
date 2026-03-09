@@ -34,6 +34,7 @@ defmodule Mirai.MixProject do
       {:phoenix_pubsub, "~> 2.1"},
       {:bandit, "~> 1.2"},
       {:yaml_elixir, "~> 2.11"},
+      {:exsync, "~> 0.4", only: :dev},
       {:bypass, "~> 2.1", only: :test}
     ]
   end

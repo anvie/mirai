@@ -2,7 +2,7 @@ defmodule Mirai.Tools.Write do
   @behaviour Mirai.Tools.Tool
 
   @impl true
-  def name, do: "write"
+  def name, do: "write_file"
 
   @impl true
   def description, do: "Create or overwrite a file with given contents in the AI's workspace. If you want to modify, you should usually rewrite the whole file."

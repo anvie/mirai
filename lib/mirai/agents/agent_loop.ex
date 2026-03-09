@@ -33,13 +33,21 @@ defmodule Mirai.AgentLoop do
     system_prompt = %{
       role: "system",
       content: """
-      You are Mirai, an intelligent AI assistant built on Elixir/OTP.
-      Keep your answers concise and helpful.
+      You are Mirai, an intelligent AI assistant
+      Keep your answers concise and helpful. Respond in the same language as the user.
+
+      AVAILABLE TOOLS:
+      - execute_command: Run shell commands (ls, cat, env, etc.)
+      - write_file: Create/overwrite files in the workspace (params: path, content)
+      - read_file: Read file contents (params: path)
+      - send_file: Send a file from the workspace to the user's chat (params: path, caption)
 
       IMPORTANT RULES:
       - For conversational messages (greetings, questions, chitchat), respond with plain text ONLY. Do NOT call any tools.
       - Only use tools when the user explicitly asks you to read/write files, execute commands, or manage sessions.
       - Never call tools speculatively or in a loop. If a tool result is sufficient, stop and respond to the user.
+      - When the user asks you to create a file AND send/deliver it, use write_file first, then send_file with the same path.
+      - When the user says "kirim", "send", "deliver", or asks for a file to be sent to them, always use the send_file tool.
       """
     }
 
@@ -50,14 +58,8 @@ defmodule Mirai.AgentLoop do
 
   # Execute loop
   defp execute_loop(loop) do
-    # Show "typing..." indicator in Telegram
-    if loop.reply_context do
-      case loop.reply_context do
-        %{channel: :telegram, chat_id: chat_id} ->
-          Telegex.send_chat_action(chat_id, "typing")
-        _ -> :ok
-      end
-    end
+    # Show "typing..." indicator
+    if loop.reply_context, do: Mirai.Channels.Outbound.send_typing(loop.reply_context)
 
     loop
     |> call_model()
@@ -123,7 +125,8 @@ defmodule Mirai.AgentLoop do
     if Enum.empty?(tool_uses) do
       # 3a. No tools. Find the text block and finalize.
       text_block = Enum.find(content_blocks, fn b -> b["type"] == "text" end)
-      final_text = if text_block, do: text_block["text"], else: ""
+      final_text = if text_block, do: text_block["text"], else: nil
+      final_text = if final_text && String.trim(final_text) != "", do: final_text, else: "(No response generated)"
       finalize({:ok, loop, final_text})
     else
       # 3b. Execute tools and continue loop (with depth check)
@@ -146,7 +149,8 @@ defmodule Mirai.AgentLoop do
   end
 
   defp execute_tools(loop, tool_uses) do
-    # Execute all tools requested by the model (sequentially for now, could be parallel)
+    reasoning_on = reasoning_enabled?(loop)
+
     tool_results = Enum.map(tool_uses, fn tool_use ->
       name = tool_use["name"]
       id = tool_use["id"]
@@ -157,17 +161,27 @@ defmodule Mirai.AgentLoop do
       params_str = if String.length(params_str) > 150, do: String.slice(params_str, 0, 150) <> "…", else: params_str
       Logger.info("Tool call: #{name}(#{params_str})")
 
-      # Use the workspace from config server
-      workspace = Application.get_env(:mirai, :workspace_dir) || "~/.mirai/workspace"
-      context = %{workspace: workspace}
+      # Send reasoning: tool call
+      if reasoning_on do
+        send_reasoning(loop, "🔧 *Tool:* `#{name}`\n```\n#{params_str}\n```")
+      end
 
-      # Call the registry dispatcher
+      workspace = Application.get_env(:mirai, :workspace_dir) || "~/.mirai/workspace"
+      chat_id = get_in(loop, [Access.key(:reply_context), Access.key(:chat_id)])
+      channel = get_in(loop, [Access.key(:reply_context), Access.key(:channel)])
+      context = %{workspace: workspace, chat_id: chat_id, channel: channel}
+
       content_str = case Mirai.Tools.Registry.execute_tool(name, params, context) do
         {:ok, result} -> result
         {:error, reason} -> "Error: #{reason}"
       end
 
-      # Format back as tool_result for Anthropic
+      # Send reasoning: tool result (truncated)
+      if reasoning_on do
+        truncated = if String.length(content_str) > 300, do: String.slice(content_str, 0, 300) <> "\n…(truncated)", else: content_str
+        send_reasoning(loop, "📋 *Result:*\n```\n#{truncated}\n```")
+      end
+
       %{
         type: "tool_result",
         tool_use_id: id,
@@ -175,7 +189,6 @@ defmodule Mirai.AgentLoop do
       }
     end)
 
-    # Append the results as a "user" message containing the tool outputs
     user_msg = %{role: "user", content: tool_results}
     %{loop | messages: loop.messages ++ [user_msg]}
   end
@@ -186,18 +199,14 @@ defmodule Mirai.AgentLoop do
     # 1. Update session history
     Mirai.Sessions.Worker.append_assistant_reply(loop.session_pid, final_text)
 
-    # 2. Send reply directly to the channel (NOT back through the gateway!)
-    case loop.reply_context do
-      %{channel: :telegram, chat_id: chat_id} ->
-        case Telegex.send_message(chat_id, final_text) do
-          {:ok, _msg} ->
-            Logger.info("Reply sent to Telegram chat #{chat_id}")
-          {:error, reason} ->
-            Logger.error("Failed to send Telegram reply: #{inspect(reason)}")
-        end
-
-      other ->
-        Logger.warning("No outbound handler for channel: #{inspect(other)}")
+    # 2. Send reply via channel-agnostic dispatcher (skip if empty)
+    if final_text && String.trim(final_text) != "" do
+      case Mirai.Channels.Outbound.send_text(loop.reply_context, final_text) do
+        {:ok, _} -> Logger.info("Reply sent to #{loop.reply_context.channel} chat #{loop.reply_context.chat_id}")
+        {:error, reason} -> Logger.error("Failed to send reply: #{inspect(reason)}")
+      end
+    else
+      Logger.warning("Skipped sending empty reply")
     end
 
     {:ok, loop}
@@ -216,4 +225,15 @@ defmodule Mirai.AgentLoop do
   defp non_blank(nil), do: nil
   defp non_blank(""), do: nil
   defp non_blank(val), do: val
+
+  defp reasoning_enabled?(loop) do
+    sender_id = get_in(loop, [Access.key(:reply_context), Access.key(:sender_id)])
+    sender_id && Mirai.UserPrefs.get(sender_id, :reasoning, false)
+  end
+
+  defp send_reasoning(loop, text) do
+    if loop.reply_context do
+      Mirai.Channels.Outbound.send_text(loop.reply_context, text, parse_mode: "Markdown")
+    end
+  end
 end

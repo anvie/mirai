@@ -2,7 +2,7 @@ defmodule Mirai.Tools.Read do
   @behaviour Mirai.Tools.Tool
 
   @impl true
-  def name, do: "read"
+  def name, do: "read_file"
 
   @impl true
   def description, do: "Read the contents of a file inside the AI's workspace."
