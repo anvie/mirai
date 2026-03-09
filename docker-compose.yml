@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  mirai:
+    image: elixir:1.16
+    container_name: mirai_engine
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    working_dir: /app
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    env_file:
+      - ./data/.env
+    command: >
+      sh -c "mix local.hex --force && 
+             mix local.rebar --force && 
+             mix deps.get && 
+             mix run --no-halt"
