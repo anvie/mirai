@@ -16,8 +16,8 @@ defmodule MiraiWeb.AuthHTML do
           body { font-family: 'Inter', sans-serif; }
         </style>
       </head>
-      <body class="bg-slate-50 text-slate-900 h-screen flex items-center justify-center p-4 selection:bg-blue-200">
-        <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+      <body class="bg-slate-50 text-slate-900 h-screen w-full flex flex-col items-center justify-center p-4 selection:bg-blue-200">
+        <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-100 p-8 mx-auto">
           <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-slate-900 tracking-tight flex items-center justify-center gap-2">
               <span class="text-3xl">🤖</span> Mirai
