@@ -1,7 +1,7 @@
 import Config
 
 config :mirai, MiraiWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
   url: [host: "0.0.0.0"],
   server: true,
   adapter: Bandit.PhoenixAdapter,
