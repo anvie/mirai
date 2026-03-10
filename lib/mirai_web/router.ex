@@ -14,7 +14,16 @@ defmodule MiraiWeb.Router do
   scope "/", MiraiWeb do
     pipe_through :browser
 
+    get "/login", AuthController, :login_page
+    post "/login", AuthController, :login
+    post "/logout", AuthController, :logout
+  end
+
+  scope "/", MiraiWeb do
+    pipe_through [:browser, MiraiWeb.Plugs.RequireAuth]
+
     live "/", DashboardLive, :index
+    live "/nodes", NodesLive, :index
     live "/config", ConfigLive, :index
   end
 end

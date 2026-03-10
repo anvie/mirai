@@ -6,102 +6,91 @@ defmodule MiraiWeb.DashboardLive do
       Phoenix.PubSub.subscribe(Mirai.PubSub, "dashboard:nodes")
     end
 
-    nodes = Mirai.Dashboard.NodeRegistry.list_nodes()
-    selected_node = List.first(nodes)
+    node_id = "local_#{Node.self() |> to_string() |> String.replace("@", "_")}"
+    current_node = Mirai.Dashboard.NodeRegistry.list_nodes() |> Enum.find(& &1.id == node_id)
+                   || Mirai.Dashboard.NodeRegistry.list_nodes() |> List.first()
 
     {:ok, assign(socket,
-      nodes: nodes,
-      selected_node: selected_node,
-      metrics: (if selected_node, do: selected_node.metrics, else: %{})
+      node: current_node,
+      metrics: (if current_node, do: current_node.metrics, else: %{})
     )}
   end
 
   def handle_info({:node_update, updated_node}, socket) do
-    # Update the nodes list
-    nodes = Enum.map(socket.assigns.nodes, fn node ->
-      if node.id == updated_node.id, do: updated_node, else: node
-    end)
-
-    socket = assign(socket, :nodes, nodes)
-
-    # Update metrics if we are looking at the updated node
-    if socket.assigns.selected_node && socket.assigns.selected_node.id == updated_node.id do
-      {:noreply, assign(socket, selected_node: updated_node, metrics: updated_node.metrics)}
+    if socket.assigns.node && socket.assigns.node.id == updated_node.id do
+      {:noreply, assign(socket, node: updated_node, metrics: updated_node.metrics)}
     else
       {:noreply, socket}
     end
   end
 
-  def handle_event("select_node", %{"id" => id}, socket) do
-    node = Enum.find(socket.assigns.nodes, fn n -> n.id == id end)
-    {:noreply, assign(socket, selected_node: node, metrics: node.metrics)}
-  end
-
   def render(assigns) do
     ~H"""
-    <div style="display: flex; gap: 20px;">
-      <div style="width: 250px;">
-        <h2 style="margin-top: 0;">Cluster Nodes</h2>
-        <ul class="node-list">
-          <%= for node <- @nodes do %>
-            <li class={"node-item #{if @selected_node && @selected_node.id == node.id, do: "active"}"} phx-click="select_node" phx-value-id={node.id}>
-              <span class={"status-badge #{node.status}"}><%= node.status %></span><br/>
-              <b><%= node.name %></b><br/>
-              <small><%= node.host %></small>
-            </li>
-          <% end %>
-        </ul>
-      </div>
+    <div class="space-y-6">
+      <%= if @node do %>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight"><%= @node.name %></h1>
+          <p class="text-sm text-slate-500 mt-1">Overall System Status — Last heartbeat: <span class="font-mono bg-slate-100 px-1 py-0.5 rounded"><%= @node.last_heartbeat %></span></p>
+        </div>
 
-      <div style="flex: 1;">
-        <%= if @selected_node do %>
-          <h1 style="margin-top: 0;"><%= @selected_node.name %> Status</h1>
-          <p>Last heartbeat: <%= @selected_node.last_heartbeat %></p>
-
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <h3>CPU Usage</h3>
-              <div class="value"><%= @metrics.cpu_percent %>%</div>
-            </div>
-            <div class="metric-card">
-              <h3>Memory Usage</h3>
-              <div class="value"><%= @metrics.memory_mb %> MB</div>
-            </div>
-            <div class="metric-card">
-              <h3>Active Agents</h3>
-              <div class="value"><%= @metrics.active_agents %></div>
-            </div>
-            <div class="metric-card">
-              <h3>Active Sessions</h3>
-              <div class="value"><%= @metrics.active_sessions %></div>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">CPU Usage</h3>
+            <div class="text-4xl font-bold text-slate-900 tracking-tight"><%= @metrics.cpu_percent %><span class="text-2xl text-slate-400">%</span></div>
           </div>
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Memory</h3>
+            <div class="text-4xl font-bold text-slate-900 tracking-tight"><%= @metrics.memory_mb %><span class="text-lg text-slate-400 ml-1">MB</span></div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Active Agents</h3>
+            <div class="text-4xl font-bold text-slate-900 tracking-tight"><%= @metrics.active_agents %></div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sessions</h3>
+            <div class="text-4xl font-bold text-slate-900 tracking-tight"><%= @metrics.active_sessions %></div>
+          </div>
+        </div>
 
-          <h2>Node Information</h2>
-          <table>
-            <thead>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+          <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+            <h2 class="text-lg font-semibold text-slate-800">Node Information</h2>
+          </div>
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th>Property</th>
-                <th>Value</th>
+                <th class="px-6 py-4">Property</th>
+                <th class="px-6 py-4">Value</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>ID</td>
-                <td><%= @selected_node.id %></td>
+            <tbody class="divide-y divide-slate-100 text-sm">
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900">Node ID</td>
+                <td class="px-6 py-4 text-slate-600 font-mono text-xs"><%= @node.id %></td>
               </tr>
-              <tr>
-                <td>Host</td>
-                <td><%= @selected_node.host %></td>
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900">Internal Host</td>
+                <td class="px-6 py-4 text-slate-600 font-mono text-xs"><%= @node.host %></td>
+              </tr>
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900">Status</td>
+                <td class="px-6 py-4">
+                  <span class={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider #{if @node.status == "online", do: "bg-emerald-100 text-emerald-800", else: "bg-red-100 text-red-800"}"}>
+                    <%= @node.status %>
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
+        </div>
 
-        <% else %>
-          <h1 style="margin-top: 0;">Welcome to Mirai Dashboard</h1>
-          <p>Select a node to view metrics.</p>
-        <% end %>
-      </div>
+      <% else %>
+        <div class="text-center py-20 bg-white rounded-xl shadow-sm border border-slate-200">
+          <svg class="mx-auto h-12 w-12 text-slate-300 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          <h1 class="mt-4 text-xl font-semibold text-slate-900">Discovering Node...</h1>
+          <p class="mt-2 text-sm text-slate-500">Awaiting status broadcast from the cluster.</p>
+        </div>
+      <% end %>
     </div>
     """
   end

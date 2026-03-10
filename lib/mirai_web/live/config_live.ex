@@ -40,47 +40,76 @@ defmodule MiraiWeb.ConfigLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <h1 style="margin-top: 0;">Configuration Editor</h1>
-      <p>Edit the raw configuration files below. Changes take effect immediately without restarting the server.</p>
+    <div class="max-w-4xl space-y-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Configuration Editor</h1>
+        <p class="text-sm text-slate-500 mt-1">Edit the raw configuration files below. Changes take effect on "Save" immediately without restarting the server.</p>
+      </div>
 
       <%= if Phoenix.Flash.get(@flash, :info) do %>
-        <p class="alert alert-info" style="padding: 10px; background-color: #d1fae5; color: #065f46; border-radius: 5px; margin-bottom: 20px;" role="alert"
-          phx-click="lv:clear-flash" phx-value-key="info"><%= Phoenix.Flash.get(@flash, :info) %></p>
+        <div class="p-4 rounded-lg bg-emerald-50 text-emerald-700 text-sm border border-emerald-100 flex items-start gap-3 cursor-pointer" phx-click="lv:clear-flash" phx-value-key="info">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span><%= Phoenix.Flash.get(@flash, :info) %></span>
+        </div>
       <% end %>
 
       <%= if Phoenix.Flash.get(@flash, :error) do %>
-        <p class="alert alert-danger" style="padding: 10px; background-color: #fee2e2; color: #991b1b; border-radius: 5px; margin-bottom: 20px;" role="alert"
-          phx-click="lv:clear-flash" phx-value-key="error"><%= Phoenix.Flash.get(@flash, :error) %></p>
+        <div class="p-4 rounded-lg bg-red-50 text-red-700 text-sm border border-red-100 flex items-start gap-3 cursor-pointer" phx-click="lv:clear-flash" phx-value-key="error">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span><%= Phoenix.Flash.get(@flash, :error) %></span>
+        </div>
       <% end %>
 
-      <div style="margin-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
-        <button phx-click="switch_tab" phx-value-tab="config" style={"padding: 10px 20px; background: none; border: none; font-size: 1rem; cursor: pointer; border-bottom: 3px solid #{if @active_tab == "config", do: "#3b82f6", else: "transparent"}; color: #{if @active_tab == "config", do: "#111827", else: "#6b7280"}; font-weight: #{if @active_tab == "config", do: "bold", else: "normal"};"}>
-          config.yml
-        </button>
-        <button phx-click="switch_tab" phx-value-tab="env" style={"padding: 10px 20px; background: none; border: none; font-size: 1rem; cursor: pointer; border-bottom: 3px solid #{if @active_tab == "env", do: "#3b82f6", else: "transparent"}; color: #{if @active_tab == "env", do: "#111827", else: "#6b7280"}; font-weight: #{if @active_tab == "env", do: "bold", else: "normal"};"}>
-          .env
-        </button>
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 bg-slate-50 px-4">
+          <button phx-click="switch_tab" phx-value-tab="config" class={"px-6 py-4 text-sm font-medium border-b-2 transition-colors focus:outline-none #{if @active_tab == "config", do: "border-blue-500 text-blue-600", else: "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}"}>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              config.yml
+            </div>
+          </button>
+          <button phx-click="switch_tab" phx-value-tab="env" class={"px-6 py-4 text-sm font-medium border-b-2 transition-colors focus:outline-none #{if @active_tab == "env", do: "border-blue-500 text-blue-600", else: "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}"}>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              .env
+            </div>
+          </button>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="p-6">
+          <%= if @active_tab == "config" do %>
+            <form phx-submit="save" class="space-y-4">
+              <input type="hidden" name="file" value="config.yml" />
+              <div class="relative">
+                <textarea name="content" rows="22" spellcheck="false" class="w-full font-mono text-sm leading-relaxed p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"><%= @config_yml %></textarea>
+                <div class="absolute top-3 right-4 px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px] font-bold tracking-wider uppercase pointer-events-none">YAML</div>
+              </div>
+              <div class="flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/20 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                  Save Configuration
+                </button>
+              </div>
+            </form>
+          <% else %>
+            <form phx-submit="save" class="space-y-4">
+              <input type="hidden" name="file" value=".env" />
+              <div class="relative">
+                <textarea name="content" rows="18" spellcheck="false" class="w-full font-mono text-sm leading-relaxed p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"><%= @dotenv %></textarea>
+                <div class="absolute top-3 right-4 px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px] font-bold tracking-wider uppercase pointer-events-none">ENV</div>
+              </div>
+              <div class="flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/20 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                  Save Environment
+                </button>
+              </div>
+            </form>
+          <% end %>
+        </div>
       </div>
-
-      <%= if @active_tab == "config" do %>
-        <form phx-submit="save">
-          <input type="hidden" name="file" value="config.yml" />
-          <textarea name="content" rows="20" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; resize: vertical;"><%= @config_yml %></textarea>
-          <div style="margin-top: 15px;">
-            <button type="submit" style="background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Save config.yml</button>
-          </div>
-        </form>
-      <% else %>
-        <form phx-submit="save">
-          <input type="hidden" name="file" value=".env" />
-          <textarea name="content" rows="15" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; resize: vertical;"><%= @dotenv %></textarea>
-          <div style="margin-top: 15px;">
-            <button type="submit" style="background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Save .env</button>
-          </div>
-        </form>
-      <% end %>
-
     </div>
     """
   end
