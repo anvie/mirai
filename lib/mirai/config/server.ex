@@ -4,20 +4,40 @@ defmodule Mirai.Config.Server do
 
   @default_workspace "~/.mirai/workspace"
 
+  # Client API
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  def reload do
+    GenServer.call(__MODULE__, :reload)
+  end
+
+  # Callbacks
   @impl true
   def init(_opts) do
     config_file = Path.expand("data/config.yml")
+    do_load(config_file, true)
+  end
+
+  @impl true
+  def handle_call(:reload, _from, state) do
+    Logger.info("Hot-reloading configuration...")
+    case do_load(state.loaded_from, false) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      error -> {:reply, error, state}
+    end
+  end
+
+  defp do_load(config_file, is_init) do
 
     # 1. Read YAML
     if not File.exists?(config_file) do
       Logger.error("CRITICAL: Initial Configuration missing. You MUST stop the server and run `mix mirai.setup` first to generate your keys and configuration.", ansi_color: :red)
-      # Sleep forcefully to give them time to read before supervisor restats it, though ideally we'd application.stop
-      Process.sleep(5000)
-      System.halt(1)
+      if is_init do
+        Process.sleep(5000)
+        System.halt(1)
+      end
     end
 
     yaml_config = case YamlElixir.read_from_file(config_file) do
@@ -46,7 +66,20 @@ defmodule Mirai.Config.Server do
       node_name: Map.get(mesh_config, "node_name", "mirai_primary")
     )
 
-    # 5. Configure Telegex bot token from OS environment
+    # 5. Configure Telegex bot token from OS environment or .env directly
+    # Re-read .env to easily pick up hot-reloads
+    env_file = Path.expand("data/.env")
+    if File.exists?(env_file) do
+      File.read!(env_file)
+      |> String.split("\n", trim: true)
+      |> Enum.each(fn line ->
+        case String.split(line, "=", parts: 2) do
+          [k, v] -> System.put_env(String.trim(k), String.trim(v))
+          _ -> :ok
+        end
+      end)
+    end
+
     telegram_token = System.get_env("TELEGRAM_BOT_TOKEN")
     if telegram_token && telegram_token != "" do
       Application.put_env(:telegex, :token, telegram_token)

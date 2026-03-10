@@ -39,9 +39,9 @@ defmodule MiraiWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="dashboard">
-      <aside class="sidebar">
-        <h2>Cluster Nodes</h2>
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 250px;">
+        <h2 style="margin-top: 0;">Cluster Nodes</h2>
         <ul class="node-list">
           <%= for node <- @nodes do %>
             <li class={"node-item #{if @selected_node && @selected_node.id == node.id, do: "active"}"} phx-click="select_node" phx-value-id={node.id}>
@@ -51,11 +51,11 @@ defmodule MiraiWeb.DashboardLive do
             </li>
           <% end %>
         </ul>
-      </aside>
+      </div>
 
-      <main class="content">
+      <div style="flex: 1;">
         <%= if @selected_node do %>
-          <h1><%= @selected_node.name %> Status</h1>
+          <h1 style="margin-top: 0;"><%= @selected_node.name %> Status</h1>
           <p>Last heartbeat: <%= @selected_node.last_heartbeat %></p>
 
           <div class="metrics-grid">
@@ -98,10 +98,10 @@ defmodule MiraiWeb.DashboardLive do
           </table>
 
         <% else %>
-          <h1>Welcome to Mirai Dashboard</h1>
-          <p>Select a node from the sidebar to view metrics.</p>
+          <h1 style="margin-top: 0;">Welcome to Mirai Dashboard</h1>
+          <p>Select a node to view metrics.</p>
         <% end %>
-      </main>
+      </div>
     </div>
     """
   end

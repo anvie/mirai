@@ -1,3 +1,23 @@
-<main>
-  <%= @inner_content %>
-</main>
+<div class="dashboard">
+  <aside class="sidebar" style="display: flex; flex-direction: column;">
+    <div style="margin-bottom: 2rem;">
+      <h2 style="margin-top: 0">Mirai</h2>
+      <ul class="node-list" style="margin-top: 10px;">
+        <li class="node-item">
+          <a href="/" style="color: white; text-decoration: none; display: block;">📊 Dashboard</a>
+        </li>
+        <li class="node-item">
+          <a href="/config" style="color: white; text-decoration: none; display: block;">⚙️ Configuration</a>
+        </li>
+      </ul>
+    </div>
+    
+    <div id="dynamic-sidebar-content" style="flex: 1;">
+      <!-- Page specific sidebar content can go here or be omitted -->
+    </div>
+  </aside>
+
+  <main class="content" style="max-height: 100vh; overflow-y: auto;">
+    <%= @inner_content %>
+  </main>
+</div>
