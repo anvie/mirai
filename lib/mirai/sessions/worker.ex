@@ -54,6 +54,10 @@ defmodule Mirai.Sessions.Worker do
     GenServer.call(pid, :get_history)
   end
 
+  def get_state(pid) do
+    GenServer.call(pid, :get_state)
+  end
+
   def clear_history(pid) do
     GenServer.call(pid, :clear_history)
   end
@@ -113,6 +117,11 @@ defmodule Mirai.Sessions.Worker do
   @impl true
   def handle_call(:get_history, _from, state) do
     {:reply, state.messages, state}
+  end
+
+  @impl true
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
   end
 
   @impl true

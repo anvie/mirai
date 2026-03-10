@@ -25,5 +25,7 @@ defmodule MiraiWeb.Router do
     live "/", DashboardLive, :index
     live "/nodes", NodesLive, :index
     live "/config", ConfigLive, :index
+    live "/sessions", SessionsLive, :index
+    live "/sessions/:id", SessionDetailLive, :index
   end
 end
