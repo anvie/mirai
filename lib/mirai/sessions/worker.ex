@@ -76,6 +76,7 @@ defmodule Mirai.Sessions.Worker do
     new_history = state.messages ++ [new_message]
 
     Mirai.Sessions.Store.append_transcript(state.session_key, new_message)
+    Phoenix.PubSub.broadcast(Mirai.PubSub, "session:#{state.session_key}", {:new_message, new_message})
 
     # 3. Trigger Agent Run asynchronously
     agent_id = state.agent_id
@@ -102,6 +103,7 @@ defmodule Mirai.Sessions.Worker do
     new_message = %{role: "assistant", content: text}
 
     Mirai.Sessions.Store.append_transcript(state.session_key, new_message)
+    Phoenix.PubSub.broadcast(Mirai.PubSub, "session:#{state.session_key}", {:new_message, new_message})
 
     # Token estimation (crude proxy: 1 token ~= 4 chars)
     # This prevents unbounded growth until a real tokenizer is added in Phase 2/3

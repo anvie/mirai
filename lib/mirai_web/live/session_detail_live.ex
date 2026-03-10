@@ -3,8 +3,7 @@ defmodule MiraiWeb.SessionDetailLive do
 
   def mount(%{"id" => id}, _session, socket) do
     if connected?(socket) do
-      # Refresh every 2 seconds to see new messages typing in
-      :timer.send_interval(2000, self(), :tick)
+      Phoenix.PubSub.subscribe(Mirai.PubSub, "session:#{id}")
     end
 
     session_data = Mirai.Sessions.get_session(id)
@@ -12,8 +11,13 @@ defmodule MiraiWeb.SessionDetailLive do
     {:ok, assign(socket, session_id: id, session_data: session_data)}
   end
 
-  def handle_info(:tick, socket) do
-    {:noreply, assign(socket, session_data: Mirai.Sessions.get_session(socket.assigns.session_id))}
+  def handle_info({:new_message, message}, socket) do
+    if socket.assigns.session_data do
+      updated_data = %{socket.assigns.session_data | messages: socket.assigns.session_data.messages ++ [message]}
+      {:noreply, assign(socket, session_data: updated_data)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def render(assigns) do
