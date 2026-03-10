@@ -28,7 +28,7 @@ defmodule MiraiWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {MiraiWeb.Layouts, :root}
+        layout: {MiraiWeb.Layouts, :app}
       unquote(html_helpers())
     end
   end
