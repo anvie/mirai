@@ -8,7 +8,7 @@ defmodule Mirai.Sessions do
   """
   def list_active_sessions do
     # Find all PIDs registered under the {:session, key} format
-    Registry.select(Mirai.Tools.Registry, [{{{Mirai.Tools.Registry, {:session, :"$1"}}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
+    Registry.select(Mirai.Tools.Registry, [{{{:session, :"$1"}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
     |> Enum.map(fn {_key, pid} ->
       try do
         Mirai.Sessions.Worker.get_state(pid)
