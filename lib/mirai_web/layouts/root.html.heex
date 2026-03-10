@@ -18,5 +18,29 @@
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-200">
     <%= @inner_content %>
+
+    <script type="module">
+      import {Socket} from "https://esm.sh/phoenix@1.7.14"
+      import {LiveSocket} from "https://esm.sh/phoenix_live_view@0.20.14"
+
+      let Hooks = {}
+      Hooks.ScrollToBottom = {
+        mounted() {
+          this.el.scrollTop = this.el.scrollHeight;
+        },
+        updated() {
+          this.el.scrollTop = this.el.scrollHeight;
+        }
+      }
+
+      let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+      let liveSocket = new LiveSocket("/live", Socket, {
+        params: {_csrf_token: csrfToken},
+        hooks: Hooks
+      })
+
+      liveSocket.connect()
+      window.liveSocket = liveSocket
+    </script>
   </body>
 </html>

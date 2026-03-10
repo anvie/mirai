@@ -68,7 +68,7 @@ defmodule MiraiWeb.SessionDetailLive do
           </div>
         <% else %>
           <!-- Messages -->
-          <div class="flex-1 overflow-y-auto p-6 space-y-6" id="chat-container">
+          <div class="flex-1 overflow-y-auto p-6 space-y-6" id="chat-container" phx-hook="ScrollToBottom">
             <%= if Enum.empty?(@session_data.messages) do %>
               <div class="h-full flex items-center justify-center text-sm text-slate-400">
                 Waiting for first message...
