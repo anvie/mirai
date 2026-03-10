@@ -4,6 +4,8 @@ services:
   mirai:
     image: elixir:1.16
     container_name: mirai_engine
+    stdin_open: true
+    tty: true
     volumes:
       - .:/app
       - ./data:/app/data
@@ -20,7 +22,5 @@ services:
              mix deps.get &&
              if [ \"$$MIX_ENV\" = 'dev' ]; then
                apt-get update -qq && apt-get install -y -qq inotify-tools > /dev/null 2>&1;
-               iex -S mix run --no-halt;
-             else
-               mix run --no-halt;
-             fi"
+             fi &&
+             elixir -S mix run --no-halt"
