@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -e
+
+# ─── Mirai Node Manager ───
+# Usage:
+#   ./mirai start                  # Start primary node
+#   ./mirai spawn worker           # Spawn a new node named "worker"
+#   ./mirai spawn analytics 4001   # Spawn on custom port
+#   ./mirai stop                   # Stop all nodes
+#   ./mirai ps                     # List running nodes
+#   ./mirai logs [name]            # Tail logs
+#   ./mirai shell [name]           # Open IEx shell on a node
+
+COOKIE="${MIRAI_COOKIE:-mirai_secret}"
+IMAGE="elixir:1.16"
+NETWORK="mirai_net"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Ensure network exists
+ensure_network() {
+  docker network inspect "$NETWORK" >/dev/null 2>&1 || \
+    docker network create "$NETWORK" >/dev/null
+}
+
+cmd_start() {
+  ensure_network
+  local port="${1:-4000}"
+  echo "Starting primary node (mirai@primary) on port $port..."
+  
+  docker run -d \
+    --name mirai_primary \
+    --hostname primary \
+    --network "$NETWORK" \
+    -v "$PROJECT_DIR:/app" \
+    -v "$PROJECT_DIR/data:/app/data" \
+    -w /app \
+    -p "$port:$port" \
+    --env-file "$PROJECT_DIR/data/.env" \
+    -e PORT="$port" \
+    -e MIX_ENV="${MIX_ENV:-dev}" \
+    "$IMAGE" \
+    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && \
+           elixir --name mirai@primary --cookie $COOKIE -S mix run --no-halt"
+
+  echo "Primary node started. Dashboard: http://localhost:$port"
+}
+
+cmd_spawn() {
+  local name="${1:?Usage: mirai spawn <name> [port]}"
+  local port="${2:-}"
+
+  ensure_network
+  echo "Spawning node: mirai@$name ..."
+
+  local port_flag=""
+  if [ -n "$port" ]; then
+    port_flag="-p $port:$port -e PORT=$port"
+  fi
+
+  docker run -d \
+    --name "mirai_$name" \
+    --hostname "$name" \
+    --network "$NETWORK" \
+    -v "$PROJECT_DIR:/app" \
+    -v "$PROJECT_DIR/data:/app/data" \
+    -w /app \
+    --env-file "$PROJECT_DIR/data/.env" \
+    -e MIX_ENV="${MIX_ENV:-dev}" \
+    $port_flag \
+    "$IMAGE" \
+    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && \
+           elixir --name mirai@$name --cookie $COOKIE -S mix run --no-halt"
+
+  echo "Node mirai@$name spawned."
+  echo "Connect from primary: Node.connect(:\"mirai@$name\")"
+}
+
+cmd_stop() {
+  echo "Stopping all Mirai nodes..."
+  docker ps -a --filter "name=mirai_" --format '{{.Names}}' | xargs -r docker rm -f
+  echo "All nodes stopped."
+}
+
+cmd_ps() {
+  echo "Running Mirai nodes:"
+  echo "────────────────────────────────────────"
+  docker ps --filter "name=mirai_" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+}
+
+cmd_logs() {
+  local name="${1:-primary}"
+  docker logs -f "mirai_$name"
+}
+
+cmd_shell() {
+  local name="${1:-primary}"
+  echo "Opening IEx shell on mirai_$name..."
+  docker exec -it "mirai_$name" \
+    iex --name "shell@$name" --cookie "$COOKIE" --remsh "mirai@$name"
+}
+
+cmd_help() {
+  cat <<EOF
+Mirai Node Manager
+
+Usage: ./mirai <command> [args]
+
+Commands:
+  start [port]          Start the primary node (default port: 4000)
+  spawn <name> [port]   Spawn a new node with the given name
+  stop                  Stop and remove all Mirai nodes
+  ps                    List running nodes
+  logs [name]           Tail logs for a node (default: primary)
+  shell [name]          Open IEx remote shell on a node
+
+Examples:
+  ./mirai start                  # Start primary on port 4000
+  ./mirai spawn worker           # Spawn node "worker"
+  ./mirai spawn analytics 4001   # Spawn with dashboard port
+  ./mirai shell worker           # Remote shell into worker
+  ./mirai stop                   # Tear down everything
+
+Environment:
+  MIX_ENV=prod ./mirai start     # Start in production mode
+  MIRAI_COOKIE=mysecret ./mirai start
+EOF
+}
+
+# ─── Dispatch ───
+case "${1:-help}" in
+  start) cmd_start "$2" ;;
+  spawn) cmd_spawn "$2" "$3" ;;
+  stop)  cmd_stop ;;
+  ps)    cmd_ps ;;
+  logs)  cmd_logs "$2" ;;
+  shell) cmd_shell "$2" ;;
+  *)     cmd_help ;;
+esac
