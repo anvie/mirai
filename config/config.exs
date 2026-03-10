@@ -10,6 +10,7 @@ config :mirai, MiraiWeb.Endpoint,
     layout: false
   ],
   pubsub_server: Mirai.PubSub,
+  secret_key_base: System.get_env("SECRET_KEY_BASE") || "xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4",
   live_view: [signing_salt: "mirai_secret_salt_12345"]
 
 config :phoenix, :json_library, Jason

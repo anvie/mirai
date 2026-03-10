@@ -61,13 +61,14 @@ cmd_spawn() {
   local name="${1:?Usage: mirai spawn <name> [port]}"
   local port="${2:-}"
 
-  ensure_network
-  echo "Spawning node: mirai@$name ..."
-
-  local port_flag=""
-  if [ -n "$port" ]; then
-    port_flag="-p $port:$port -e PORT=$port"
+  # If no port specified, read from .env or default to 4000
+  if [ -z "$port" ]; then
+    port=$(grep -E '^PORT=' "$PROJECT_DIR/data/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+    port="${port:-4000}"
   fi
+
+  ensure_network
+  echo "Spawning node: mirai@$name on port $port..."
 
   docker run -d \
     --name "mirai_$name" \
@@ -78,11 +79,13 @@ cmd_spawn() {
     -w /app \
     --env-file "$PROJECT_DIR/data/.env" \
     -e MIX_ENV="${MIX_ENV:-dev}" \
-    $port_flag \
+    -e PORT="$port" \
+    -p "$port:$port" \
     "$IMAGE" \
     sh -c "$(boot_cmd mirai@$name)"
 
   echo "Node mirai@$name spawned."
+  echo "Dashboard: http://localhost:$port"
   echo "Connect from primary: Node.connect(:\"mirai@$name\")"
 }
 
