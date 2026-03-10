@@ -22,6 +22,19 @@ ensure_network() {
     docker network create "$NETWORK" >/dev/null
 }
 
+# Build the boot command (handles dev vs prod)
+boot_cmd() {
+  local node_name="$1"
+  local base="mix local.hex --force && mix local.rebar --force && mix deps.get"
+  local env="${MIX_ENV:-dev}"
+
+  if [ "$env" = "dev" ]; then
+    echo "$base && apt-get update -qq && apt-get install -y -qq inotify-tools > /dev/null 2>&1; iex --name $node_name --cookie $COOKIE -S mix run --no-halt"
+  else
+    echo "$base && elixir --name $node_name --cookie $COOKIE -S mix run --no-halt"
+  fi
+}
+
 cmd_start() {
   ensure_network
   local port="${1:-4000}"
@@ -39,8 +52,7 @@ cmd_start() {
     -e PORT="$port" \
     -e MIX_ENV="${MIX_ENV:-dev}" \
     "$IMAGE" \
-    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && \
-           elixir --name mirai@primary --cookie $COOKIE -S mix run --no-halt"
+    sh -c "$(boot_cmd mirai@primary)"
 
   echo "Primary node started. Dashboard: http://localhost:$port"
 }
@@ -68,8 +80,7 @@ cmd_spawn() {
     -e MIX_ENV="${MIX_ENV:-dev}" \
     $port_flag \
     "$IMAGE" \
-    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && \
-           elixir --name mirai@$name --cookie $COOKIE -S mix run --no-halt"
+    sh -c "$(boot_cmd mirai@$name)"
 
   echo "Node mirai@$name spawned."
   echo "Connect from primary: Node.connect(:\"mirai@$name\")"
