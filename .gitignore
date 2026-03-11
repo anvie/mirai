@@ -32,3 +32,6 @@ mirai-*.tar
 
 /config.yml
 /config.yaml
+
+# Configuration
+config.yaml
