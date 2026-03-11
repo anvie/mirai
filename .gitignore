@@ -29,3 +29,6 @@ mirai-*.tar
 *.env
 
 /data
+
+/config.yml
+/config.yaml

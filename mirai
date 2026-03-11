@@ -63,7 +63,7 @@ cmd_setup() {
     -v "$PROJECT_DIR:/app" \
     -w /app \
     "$IMAGE" \
-    sh -c "apt-get update -qq && apt-get install -y -qq rlwrap > /dev/null 2>&1 && mix local.hex --force && mix local.rebar --force && mix deps.get && rlwrap mix mirai.setup"
+    sh -c "apt-get update -qq && apt-get install -y -qq rlwrap > /dev/null 2>&1 && mix local.hex --force && mix local.rebar --force && mix deps.get && rlwrap mix mirai.setup 2> >(grep -v 'rlwrap: error: read error on master pty: Input/output error' >&2)"
 }
 
 cmd_spawn() {
