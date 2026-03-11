@@ -16,7 +16,7 @@ defmodule Mirai.Config.Server do
   # Callbacks
   @impl true
   def init(_opts) do
-    config_file = Path.expand("data/config.yml")
+    config_file = Path.expand("config.yaml")
     do_load(config_file, true)
   end
 
@@ -66,32 +66,26 @@ defmodule Mirai.Config.Server do
       node_name: Map.get(mesh_config, "node_name", "mirai_primary")
     )
 
-    # 5. Configure Telegex bot token from OS environment or .env directly
-    # Re-read .env to easily pick up hot-reloads
-    env_file = Path.expand("data/.env")
-    if File.exists?(env_file) do
-      File.read!(env_file)
-      |> String.split("\n", trim: true)
-      |> Enum.each(fn line ->
-        case String.split(line, "=", parts: 2) do
-          [k, v] -> System.put_env(String.trim(k), String.trim(v))
-          _ -> :ok
-        end
-      end)
-    end
+    # 5. Configure Secrets & API Keys
+    Application.put_env(:mirai, :telegram_bot_token, Map.get(yaml_config, "telegram_bot_token"))
+    Application.put_env(:mirai, :openrouter_api_key, Map.get(yaml_config, "openrouter_api_key"))
+    Application.put_env(:mirai, :openrouter_model, Map.get(yaml_config, "openrouter_model"))
+    Application.put_env(:mirai, :anthropic_api_key, Map.get(yaml_config, "anthropic_api_key"))
+    Application.put_env(:mirai, :whatsapp_api_token, Map.get(yaml_config, "whatsapp_api_token"))
+    Application.put_env(:mirai, :whatsapp_phone_number_id, Map.get(yaml_config, "whatsapp_phone_number_id"))
 
-    telegram_token = System.get_env("TELEGRAM_BOT_TOKEN")
+    telegram_token = Map.get(yaml_config, "telegram_bot_token")
     if telegram_token && telegram_token != "" do
       Application.put_env(:telegex, :token, telegram_token)
       Logger.info("Telegram bot token configured.")
     else
-      Logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram polling will fail.")
+      Logger.warning("telegram_bot_token not set in config.yaml — Telegram polling will fail.")
     end
 
     # 6. Initialization
     File.mkdir_p!(workspace_dir)
     Logger.configure(level: log_level)
-    Logger.info("Mirai Configuration loaded from data/config.yml. Workspace: #{workspace_dir}")
+    Logger.info("Mirai Configuration loaded from config.yaml. Workspace: #{workspace_dir}")
 
     {:ok, %{workspace_dir: workspace_dir, loaded_from: config_file}}
   end

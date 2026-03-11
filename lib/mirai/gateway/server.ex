@@ -22,7 +22,8 @@ defmodule Mirai.Gateway.Server do
     }
 
     # Auto-start Telegram worker if token is present
-    if System.get_env("TELEGRAM_BOT_TOKEN") do
+    telegram_token = Application.get_env(:mirai, :telegram_bot_token)
+    if telegram_token && telegram_token != "" do
       DynamicSupervisor.start_child(
         Mirai.Channels.Supervisor,
         {Mirai.Channels.Telegram.Worker, []}

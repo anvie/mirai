@@ -34,7 +34,7 @@ defmodule Mirai.Application do
   defp print_banner do
     env = Mix.env()
     hot_reload = if env == :dev, do: "✅ ON (exsync)", else: "❌ OFF"
-    port = System.get_env("PORT") || "4000"
+    port = Application.get_env(:mirai, MiraiWeb.Endpoint)[:port] |> to_string()
 
     IO.puts("""
 

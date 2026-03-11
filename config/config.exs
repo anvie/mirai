@@ -1,7 +1,7 @@
 import Config
 
 config :mirai, MiraiWeb.Endpoint,
-  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {0, 0, 0, 0}],
   url: [host: "0.0.0.0"],
   server: true,
   adapter: Bandit.PhoenixAdapter,
@@ -11,7 +11,6 @@ config :mirai, MiraiWeb.Endpoint,
   ],
   pubsub_server: Mirai.PubSub,
   check_origin: false,
-  secret_key_base: System.get_env("SECRET_KEY_BASE") || "xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4",
   live_view: [signing_salt: "mirai_secret_salt_12345"]
 
 config :phoenix, :json_library, Jason

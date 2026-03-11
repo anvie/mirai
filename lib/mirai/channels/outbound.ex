@@ -43,7 +43,7 @@ defmodule Mirai.Channels.Outbound do
   end
 
   defp dispatch(:send_file, :telegram, chat_id, %{file_path: file_path, caption: caption}) do
-    token = System.get_env("TELEGRAM_BOT_TOKEN")
+    token = Application.get_env(:mirai, :telegram_bot_token)
     url = "https://api.telegram.org/bot#{token}/sendDocument"
 
     args = [
@@ -68,8 +68,8 @@ defmodule Mirai.Channels.Outbound do
   # ── WhatsApp ──
 
   defp dispatch(:send_text, :whatsapp, chat_id, %{text: text}) do
-    token = System.get_env("WHATSAPP_API_TOKEN")
-    phone_id = System.get_env("WHATSAPP_PHONE_NUMBER_ID")
+    token = Application.get_env(:mirai, :whatsapp_api_token)
+    phone_id = Application.get_env(:mirai, :whatsapp_phone_number_id)
     url = "https://graph.facebook.com/v18.0/#{phone_id}/messages"
 
     payload = Jason.encode!(%{
@@ -95,8 +95,8 @@ defmodule Mirai.Channels.Outbound do
   defp dispatch(:send_typing, :whatsapp, _chat_id, _), do: :ok
 
   defp dispatch(:send_file, :whatsapp, chat_id, %{file_path: file_path, caption: caption}) do
-    token = System.get_env("WHATSAPP_API_TOKEN")
-    phone_id = System.get_env("WHATSAPP_PHONE_NUMBER_ID")
+    token = Application.get_env(:mirai, :whatsapp_api_token)
+    phone_id = Application.get_env(:mirai, :whatsapp_phone_number_id)
     upload_url = "https://graph.facebook.com/v18.0/#{phone_id}/media"
 
     upload_args = [

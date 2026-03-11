@@ -7,12 +7,12 @@ defmodule Mirai.Models.OpenRouter do
 
   @impl true
   def chat_completion(messages, opts \\ []) do
-    api_key = Keyword.get(opts, :api_key) || System.get_env("OPENROUTER_API_KEY")
+    api_key = Keyword.get(opts, :api_key) || Application.get_env(:mirai, :openrouter_api_key)
 
     unless api_key do
       {:error, "API key not found"}
     else
-      model = Keyword.get(opts, :model) || System.get_env("OPENROUTER_MODEL") || @default_model
+      model = Keyword.get(opts, :model) || Application.get_env(:mirai, :openrouter_model) || @default_model
 
       # Translate tools to OpenAI format
       tools = Keyword.get(opts, :tools, [])

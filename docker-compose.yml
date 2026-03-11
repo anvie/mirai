@@ -12,8 +12,6 @@ services:
     working_dir: /app
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
-    env_file:
-      - ./data/.env
     environment:
       - MIX_ENV=${MIX_ENV:-dev}
     command: >

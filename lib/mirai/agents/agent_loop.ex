@@ -69,7 +69,6 @@ defmodule Mirai.AgentLoop do
   defp call_model(loop) do
     require Logger
 
-    # Only pass tools on the first call. After tool results come back,
     # omit tools to force the model to respond with text.
     tools = if loop.depth == 0 do
       Mirai.Tools.Registry.get_all_schemas()
@@ -77,8 +76,8 @@ defmodule Mirai.AgentLoop do
       []
     end
 
-    openrouter_key = System.get_env("OPENROUTER_API_KEY") |> non_blank()
-    anthropic_key = System.get_env("ANTHROPIC_API_KEY") |> non_blank()
+    openrouter_key = Application.get_env(:mirai, :openrouter_api_key) |> non_blank()
+    anthropic_key = Application.get_env(:mirai, :anthropic_api_key) |> non_blank()
     default_provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
 
     result =

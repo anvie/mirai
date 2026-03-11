@@ -7,7 +7,7 @@ defmodule Mirai.Models.Anthropic do
 
   @impl true
   def chat_completion(messages, opts \\ []) do
-    api_key = Keyword.get(opts, :api_key) || System.get_env("ANTHROPIC_API_KEY")
+    api_key = Keyword.get(opts, :api_key) || Application.get_env(:mirai, :anthropic_api_key)
 
     unless api_key do
       {:error, "API key not found"}

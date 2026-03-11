@@ -63,8 +63,8 @@ MIX_ENV=prod docker-compose up
 
 ```
                         ┌─────────────────────────────┐
-                        │       BEAM Cluster           │
-                        │   (libcluster auto-discovery)│
+                        │         BEAM Cluster        │
+                        │  (libcluster auto-discovery)│
                         └──────────┬──────────────────┘
                ┌───────────────────┼───────────────────┐
                ▼                   ▼                   ▼
@@ -99,14 +99,16 @@ docker run -it --rm -v $(pwd):/app -w /app elixir:1.16 \
   sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && mix test"
 ```
 
-## Environment Variables
+## Configuration
 
-| Variable | Description |
-|----------|-------------|
-| `MIX_ENV` | `dev` (default) or `prod` |
-| `PORT` | Web dashboard port (default: 4000) |
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token |
-| `OPENROUTER_API_KEY` | OpenRouter API key |
-| `OPENROUTER_MODEL` | Model name (e.g. `google/gemini-3.1-flash-lite-preview`) |
-| `WHATSAPP_API_TOKEN` | WhatsApp Business API token |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp phone number ID |
+All configuration is managed in `config.yaml` at the root of the project.
+
+| Key | Description |
+|-----|-------------|
+| `port` | Web dashboard port (default: 4000) |
+| `telegram_bot_token` | Telegram Bot API token |
+| `openrouter_api_key` | OpenRouter API key |
+| `openrouter_model` | Model name (e.g. `google/gemini-3.1-flash-lite-preview`) |
+| `anthropic_api_key` | Anthropic API key |
+| `whatsapp_api_token` | WhatsApp Business API token |
+| `whatsapp_phone_number_id` | WhatsApp phone number ID |

@@ -103,7 +103,7 @@ defmodule Mirai.Channels.Telegram.Worker do
 
   defp handle_command("status", _args, chat_id, _msg) do
     provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
-    model = System.get_env("OPENROUTER_MODEL") || "(default)"
+    model = Application.get_env(:mirai, :openrouter_model) || "(default)"
     uptime = :erlang.statistics(:wall_clock) |> elem(0) |> div(1000)
     mins = div(uptime, 60)
     secs = rem(uptime, 60)
@@ -120,14 +120,14 @@ defmodule Mirai.Channels.Telegram.Worker do
   defp handle_command("model", [], chat_id, _msg) do
     # No args → show current model
     provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
-    model = System.get_env("OPENROUTER_MODEL") || "(default)"
+    model = Application.get_env(:mirai, :openrouter_model) || "(default)"
     Telegex.send_message(chat_id, "🤖 Provider: `#{provider}`\nModel: `#{model}`\n\n_Tip: /model <name> to switch_", parse_mode: "Markdown")
   end
 
   defp handle_command("model", args, chat_id, _msg) do
     # Args provided → set model
     new_model = Enum.join(args, " ")
-    System.put_env("OPENROUTER_MODEL", new_model)
+    Application.put_env(:mirai, :openrouter_model, new_model)
     Telegex.send_message(chat_id, "✅ Model switched to: `#{new_model}`", parse_mode: "Markdown")
   end
 
