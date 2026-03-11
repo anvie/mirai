@@ -8,6 +8,7 @@ set -e
 #   ./mirai spawn analytics 4001   # Spawn on custom port
 #   ./mirai stop                   # Stop all nodes
 #   ./mirai ps                     # List running nodes
+#   ./mirai setup                  # Run onboarding wizard
 #   ./mirai logs [name]            # Tail logs
 #   ./mirai shell [name]           # Open IEx shell on a node
 
@@ -48,7 +49,6 @@ cmd_start() {
     -v "$PROJECT_DIR/data:/app/data" \
     -w /app \
     -p "$port:$port" \
-    --env-file "$PROJECT_DIR/data/.env" \
     -e PORT="$port" \
     -e MIX_ENV="${MIX_ENV:-dev}" \
     "$IMAGE" \
@@ -57,13 +57,24 @@ cmd_start() {
   echo "Primary node started. Dashboard: http://localhost:$port"
 }
 
+cmd_setup() {
+  echo "Running Mirai interactive setup..."
+  docker run -it --rm \
+    -v "$PROJECT_DIR:/app" \
+    -w /app \
+    "$IMAGE" \
+    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && mix mirai.setup"
+}
+
 cmd_spawn() {
   local name="${1:?Usage: mirai spawn <name> [port]}"
   local port="${2:-}"
 
-  # If no port specified, read from .env or default to 4000
+  local port="${2:-}"
+
+  # If no port specified, read from config.yaml or default to 4000
   if [ -z "$port" ]; then
-    port=$(grep -E '^PORT=' "$PROJECT_DIR/data/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+    port=$(grep -E '^port:' "$PROJECT_DIR/config.yaml" 2>/dev/null | cut -d: -f2 | tr -d '[:space:]')
     port="${port:-4000}"
   fi
 
@@ -77,7 +88,6 @@ cmd_spawn() {
     -v "$PROJECT_DIR:/app" \
     -v "$PROJECT_DIR/data:/app/data" \
     -w /app \
-    --env-file "$PROJECT_DIR/data/.env" \
     -e MIX_ENV="${MIX_ENV:-dev}" \
     -e PORT="$port" \
     -p "$port:$port" \
@@ -120,6 +130,7 @@ Mirai Node Manager
 Usage: ./mirai <command> [args]
 
 Commands:
+  setup                 Run the interactive onboarding wizard
   start [port]          Start the primary node (default port: 4000)
   spawn <name> [port]   Spawn a new node with the given name
   stop                  Stop and remove all Mirai nodes
@@ -128,6 +139,7 @@ Commands:
   shell [name]          Open IEx remote shell on a node
 
 Examples:
+  ./mirai setup                  # Onboard and generate config.yaml
   ./mirai start                  # Start primary on port 4000
   ./mirai spawn worker           # Spawn node "worker"
   ./mirai spawn analytics 4001   # Spawn with dashboard port
@@ -142,6 +154,7 @@ EOF
 
 # ─── Dispatch ───
 case "${1:-help}" in
+  setup) cmd_setup ;;
   start) cmd_start "$2" ;;
   spawn) cmd_spawn "$2" "$3" ;;
   stop)  cmd_stop ;;
