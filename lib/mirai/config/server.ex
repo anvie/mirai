@@ -66,20 +66,25 @@ defmodule Mirai.Config.Server do
       node_name: Map.get(mesh_config, "node_name", "mirai_primary")
     )
 
-    # 5. Configure Secrets & API Keys
-    Application.put_env(:mirai, :telegram_bot_token, Map.get(yaml_config, "telegram_bot_token"))
-    Application.put_env(:mirai, :openrouter_api_key, Map.get(yaml_config, "openrouter_api_key"))
-    Application.put_env(:mirai, :openrouter_model, Map.get(yaml_config, "openrouter_model"))
-    Application.put_env(:mirai, :anthropic_api_key, Map.get(yaml_config, "anthropic_api_key"))
-    Application.put_env(:mirai, :whatsapp_api_token, Map.get(yaml_config, "whatsapp_api_token"))
-    Application.put_env(:mirai, :whatsapp_phone_number_id, Map.get(yaml_config, "whatsapp_phone_number_id"))
+    # 5. Configure Secrets & API Keys (from nested groups)
+    telegram_config = yaml_config["telegram"] || %{}
+    anthropic_config = yaml_config["anthropic"] || %{}
+    openrouter_config = yaml_config["openrouter"] || %{}
+    whatsapp_config = yaml_config["whatsapp"] || %{}
 
-    telegram_token = Map.get(yaml_config, "telegram_bot_token")
+    Application.put_env(:mirai, :telegram_bot_token, Map.get(telegram_config, "bot_token"))
+    Application.put_env(:mirai, :openrouter_api_key, Map.get(openrouter_config, "api_key"))
+    Application.put_env(:mirai, :openrouter_model, Map.get(openrouter_config, "model"))
+    Application.put_env(:mirai, :anthropic_api_key, Map.get(anthropic_config, "api_key"))
+    Application.put_env(:mirai, :whatsapp_api_token, Map.get(whatsapp_config, "api_token"))
+    Application.put_env(:mirai, :whatsapp_phone_number_id, Map.get(whatsapp_config, "phone_number_id"))
+
+    telegram_token = Map.get(telegram_config, "bot_token")
     if telegram_token && telegram_token != "" do
       Application.put_env(:telegex, :token, telegram_token)
       Logger.info("Telegram bot token configured.")
     else
-      Logger.warning("telegram_bot_token not set in config.yaml — Telegram polling will fail.")
+      Logger.warning("telegram.bot_token not set in config.yaml — Telegram polling will fail.")
     end
 
     # 6. Initialization

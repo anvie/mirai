@@ -2,15 +2,13 @@
 set -e
 
 # ─── Mirai Inter-Node Communication Test ───
-# This script starts two Mirai nodes and verifies they can communicate.
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 BOLD='\033[1m'
 
 pass() { echo -e "  ${GREEN}✅ PASS${NC}: $1"; }
@@ -29,36 +27,29 @@ echo ""
 info "Starting test cluster (alpha + beta)..."
 docker compose up -d 2>&1 | tail -2
 
-# ── Step 2: Wait for nodes to boot ──
-info "Waiting for nodes to compile and start (this may take a minute)..."
-sleep 5
+# ── Step 2: Wait for nodes to be ready ──
+info "Waiting for nodes to compile and start (cached builds ~15s, fresh ~90s)..."
 
-# Wait for alpha to be ready
 for i in $(seq 1 60); do
-  if docker exec mirai_alpha sh -c "elixir --name probe@alpha --cookie mirai_cluster_test -e 'IO.puts(:ok)'" > /dev/null 2>&1; then
+  a=$(docker exec mirai_alpha epmd -names 2>/dev/null | grep mirai || true)
+  b=$(docker exec mirai_beta epmd -names 2>/dev/null | grep mirai || true)
+  if [ -n "$a" ] && [ -n "$b" ]; then
     break
   fi
-  sleep 2
-done
-
-# Wait for beta to be ready
-for i in $(seq 1 60); do
-  if docker exec mirai_beta sh -c "elixir --name probe2@beta --cookie mirai_cluster_test -e 'IO.puts(:ok)'" > /dev/null 2>&1; then
-    break
+  if [ "$i" = "60" ]; then
+    echo -e "  ${RED}Timeout waiting for nodes to start${NC}"
+    docker compose logs --tail=10
+    docker compose down
+    exit 1
   fi
-  sleep 2
+  sleep 3
 done
-
-info "Nodes should be ready. Running tests..."
+info "Both nodes are up!"
 echo ""
 
 # ── Test 1: Connect alpha → beta ──
 echo -e "${BOLD}Test 1: Node.connect(mirai@beta) from alpha${NC}"
-CONNECT_RESULT=$(docker exec mirai_alpha sh -c \
-  "elixir --name tester1@alpha --cookie mirai_cluster_test -e '
-    result = Node.connect(:\"mirai@beta\")
-    IO.puts(result)
-  '" 2>/dev/null | tail -1)
+CONNECT_RESULT=$(docker exec mirai_alpha elixir --sname tester1 --cookie mirai_cluster_test -e 'IO.puts(Node.connect(:"mirai@beta"))' 2>/dev/null | tail -1)
 
 if [ "$CONNECT_RESULT" = "true" ]; then
   pass "Node alpha connected to beta"
@@ -68,12 +59,11 @@ fi
 
 # ── Test 2: Verify Node.list on alpha sees beta ──
 echo -e "${BOLD}Test 2: Node.list() from alpha${NC}"
-NODE_LIST=$(docker exec mirai_alpha sh -c \
-  "elixir --name tester2@alpha --cookie mirai_cluster_test -e '
-    Node.connect(:\"mirai@beta\")
-    Process.sleep(500)
-    IO.puts(inspect(Node.list()))
-  '" 2>/dev/null | tail -1)
+NODE_LIST=$(docker exec mirai_alpha elixir --sname tester2 --cookie mirai_cluster_test -e '
+  Node.connect(:"mirai@beta")
+  Process.sleep(1000)
+  IO.puts(inspect(Node.list()))
+' 2>/dev/null | tail -1)
 
 if echo "$NODE_LIST" | grep -q "mirai@beta"; then
   pass "Node.list() contains :\"mirai@beta\""
@@ -83,13 +73,12 @@ fi
 
 # ── Test 3: RPC call to beta → Node.self() ──
 echo -e "${BOLD}Test 3: :rpc.call(mirai@beta, Node, :self, [])${NC}"
-RPC_RESULT=$(docker exec mirai_alpha sh -c \
-  "elixir --name tester3@alpha --cookie mirai_cluster_test -e '
-    Node.connect(:\"mirai@beta\")
-    Process.sleep(500)
-    result = :rpc.call(:\"mirai@beta\", Node, :self, [])
-    IO.puts(result)
-  '" 2>/dev/null | tail -1)
+RPC_RESULT=$(docker exec mirai_alpha elixir --sname tester3 --cookie mirai_cluster_test -e '
+  Node.connect(:"mirai@beta")
+  Process.sleep(1000)
+  result = :rpc.call(:"mirai@beta", Node, :self, [])
+  IO.puts(result)
+' 2>/dev/null | tail -1)
 
 if [ "$RPC_RESULT" = "mirai@beta" ]; then
   pass ":rpc.call returned :\"mirai@beta\""
@@ -99,13 +88,12 @@ fi
 
 # ── Test 4: RPC call to beta → NodeRegistry.list_nodes() ──
 echo -e "${BOLD}Test 4: :rpc.call(mirai@beta, Mirai.Dashboard.NodeRegistry, :list_nodes, [])${NC}"
-REGISTRY_RESULT=$(docker exec mirai_alpha sh -c \
-  "elixir --name tester4@alpha --cookie mirai_cluster_test -e '
-    Node.connect(:\"mirai@beta\")
-    Process.sleep(500)
-    result = :rpc.call(:\"mirai@beta\", Mirai.Dashboard.NodeRegistry, :list_nodes, [])
-    IO.puts(inspect(result))
-  '" 2>/dev/null | tail -1)
+REGISTRY_RESULT=$(docker exec mirai_alpha elixir --sname tester4 --cookie mirai_cluster_test -e '
+  Node.connect(:"mirai@beta")
+  Process.sleep(1000)
+  result = :rpc.call(:"mirai@beta", Mirai.Dashboard.NodeRegistry, :list_nodes, [])
+  IO.puts(inspect(result))
+' 2>/dev/null | tail -1)
 
 if echo "$REGISTRY_RESULT" | grep -q "local_mirai_1"; then
   pass "Beta's NodeRegistry returned node data"

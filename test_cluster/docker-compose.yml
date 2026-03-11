@@ -10,18 +10,18 @@ services:
     volumes:
       - ../:/app
       - ./config_alpha.yaml:/app/config_alpha.yaml
+      - alpha_build:/app/_build
     working_dir: /app
     ports:
       - "4001:4001"
     environment:
-      - MIX_ENV=dev
+      - MIX_ENV=prod
       - MIRAI_CONFIG_PATH=/app/config_alpha.yaml
-      - ERL_FLAGS=-name mirai@alpha -setcookie mirai_cluster_test
     command: >
       sh -c "mix local.hex --force &&
              mix local.rebar --force &&
              mix deps.get &&
-             elixir --name mirai@alpha --cookie mirai_cluster_test -S mix run --no-halt"
+             elixir --sname mirai@alpha --cookie mirai_cluster_test -S mix run --no-halt"
 
   beta:
     image: elixir:1.16
@@ -32,15 +32,19 @@ services:
     volumes:
       - ../:/app
       - ./config_beta.yaml:/app/config_beta.yaml
+      - beta_build:/app/_build
     working_dir: /app
     ports:
       - "4002:4002"
     environment:
-      - MIX_ENV=dev
+      - MIX_ENV=prod
       - MIRAI_CONFIG_PATH=/app/config_beta.yaml
-      - ERL_FLAGS=-name mirai@beta -setcookie mirai_cluster_test
     command: >
       sh -c "mix local.hex --force &&
              mix local.rebar --force &&
              mix deps.get &&
-             elixir --name mirai@beta --cookie mirai_cluster_test -S mix run --no-halt"
+             elixir --sname mirai@beta --cookie mirai_cluster_test -S mix run --no-halt"
+
+volumes:
+  alpha_build:
+  beta_build:

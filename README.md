@@ -101,14 +101,38 @@ docker run -it --rm -v $(pwd):/app -w /app elixir:1.16 \
 
 ## Configuration
 
-All configuration is managed in `config.yaml` at the root of the project.
+All configuration is managed in `config.yaml` at the root of the project. Run `./mirai setup` to generate it interactively.
 
-| Key | Description |
-|-----|-------------|
-| `port` | Web dashboard port (default: 4000) |
-| `telegram_bot_token` | Telegram Bot API token |
-| `openrouter_api_key` | OpenRouter API key |
-| `openrouter_model` | Model name (e.g. `google/gemini-3.1-flash-lite-preview`) |
-| `anthropic_api_key` | Anthropic API key |
-| `whatsapp_api_token` | WhatsApp Business API token |
-| `whatsapp_phone_number_id` | WhatsApp phone number ID |
+```yaml
+server:
+  port: 4000
+  secret_key_base: "..."
+  node_password: "mirai_admin"
+
+telegram:
+  bot_token: "your-telegram-bot-token"
+
+anthropic:
+  api_key: "your-anthropic-api-key"
+
+openrouter:
+  api_key: "your-openrouter-api-key"
+  model: "anthropic/claude-sonnet-4"
+
+whatsapp:
+  api_token: ""
+  phone_number_id: ""
+
+system:
+  workspace_dir: "~/.mirai/workspace"
+  log_level: "info"
+  admin_user_id: 0
+
+agents:
+  default_provider: "openrouter"
+  max_recursion_depth: 10
+
+mesh:
+  node_name: "mirai_primary"
+  cluster_strategy: "epmd"
+```

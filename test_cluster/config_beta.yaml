@@ -1,13 +1,22 @@
 # Test cluster config for node beta
-port: 4002
-secret_key_base: "test_secret_beta_xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4"
-node_password: "test_cluster"
-telegram_bot_token: ""
-anthropic_api_key: ""
-openrouter_api_key: ""
-openrouter_model: ""
-whatsapp_api_token: ""
-whatsapp_phone_number_id: ""
+server:
+  port: 4002
+  secret_key_base: "test_secret_beta_xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4"
+  node_password: "test_cluster"
+
+telegram:
+  bot_token: ""
+
+anthropic:
+  api_key: ""
+
+openrouter:
+  api_key: ""
+  model: ""
+
+whatsapp:
+  api_token: ""
+  phone_number_id: ""
 
 system:
   workspace_dir: "/tmp/mirai_beta"
