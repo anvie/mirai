@@ -16,7 +16,7 @@ defmodule Mirai.Config.Server do
   # Callbacks
   @impl true
   def init(_opts) do
-    config_file = Path.expand("config.yaml")
+    config_file = System.get_env("MIRAI_CONFIG_PATH") || Path.expand("config.yaml")
     do_load(config_file, true)
   end
 

@@ -1,7 +1,7 @@
 import Config
 
 if config_env() != :test do
-  config_path = Path.expand("../config.yaml", __DIR__)
+  config_path = System.get_env("MIRAI_CONFIG_PATH") || Path.expand("../config.yaml", __DIR__)
 
   yaml_config =
     if File.exists?(config_path) do

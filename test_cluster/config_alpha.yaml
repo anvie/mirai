@@ -1,0 +1,23 @@
+# Test cluster config for node alpha
+port: 4001
+secret_key_base: "test_secret_alpha_xK7Fq2R9sLmN3pJv8wYzA5bD0eHtUi6OcGf1MnQaSdWjXoZlCkIgBrEyPuTvmh4"
+node_password: "test_cluster"
+telegram_bot_token: ""
+anthropic_api_key: ""
+openrouter_api_key: ""
+openrouter_model: ""
+whatsapp_api_token: ""
+whatsapp_phone_number_id: ""
+
+system:
+  workspace_dir: "/tmp/mirai_alpha"
+  log_level: "info"
+  admin_user_id: 0
+
+agents:
+  default_provider: "openrouter"
+  max_recursion_depth: 3
+
+mesh:
+  node_name: "mirai_alpha"
+  cluster_strategy: "epmd"
