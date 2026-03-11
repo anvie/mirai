@@ -63,7 +63,7 @@ cmd_setup() {
     -v "$PROJECT_DIR:/app" \
     -w /app \
     "$IMAGE" \
-    sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && mix mirai.setup"
+    sh -c "apt-get update -qq && apt-get install -y -qq rlwrap > /dev/null 2>&1 && mix local.hex --force && mix local.rebar --force && mix deps.get && rlwrap mix mirai.setup"
 }
 
 cmd_spawn() {
