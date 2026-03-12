@@ -22,6 +22,7 @@ defmodule Mirai.Application do
       {DynamicSupervisor, name: Mirai.Plugins.Manager, strategy: :one_for_one},
       Mirai.Gateway.Supervisor,
       Mirai.Dashboard.NodeRegistry,
+      Mirai.AgentMesh.Router,
       MiraiWeb.Endpoint
     ]
 

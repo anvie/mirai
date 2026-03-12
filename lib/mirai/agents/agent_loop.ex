@@ -29,26 +29,42 @@ defmodule Mirai.AgentLoop do
   end
 
   defp build_context(loop) do
-    # STUB: Retrieve agent's specific instructions or system prompt from config
+    workspace = Application.get_env(:mirai, :workspace_dir) || "~/.mirai/workspace"
+    workspace = Path.expand(workspace)
+
+    soul_path = Path.join(workspace, "SOUL.md")
+    tools_path = Path.join(workspace, "TOOLS.md")
+
+    soul_content =
+      if File.exists?(soul_path) do
+        File.read!(soul_path)
+      else
+        "You are Mirai, an intelligent AI assistant\nKeep your answers concise and helpful. Respond in the same language as the user."
+      end
+
+    tools_content =
+      if File.exists?(tools_path) do
+        File.read!(tools_path)
+      else
+        """
+        AVAILABLE TOOLS:
+        - execute_command: Run shell commands (ls, cat, env, etc.)
+        - write_file: Create/overwrite files in the workspace (params: path, content)
+        - read_file: Read file contents (params: path)
+        - send_file: Send a file from the workspace to the user's chat (params: path, caption)
+
+        IMPORTANT RULES:
+        - For conversational messages (greetings, questions, chitchat), respond with plain text ONLY. Do NOT call any tools.
+        - Only use tools when the user explicitly asks you to read/write files, execute commands, or manage sessions.
+        - Never call tools speculatively or in a loop. If a tool result is sufficient, stop and respond to the user.
+        - When the user asks you to create a file AND send/deliver it, use write_file first, then send_file with the same path.
+        - When the user says "kirim", "send", "deliver", or asks for a file to be sent to them, always use the send_file tool.
+        """
+      end
+
     system_prompt = %{
       role: "system",
-      content: """
-      You are Mirai, an intelligent AI assistant
-      Keep your answers concise and helpful. Respond in the same language as the user.
-
-      AVAILABLE TOOLS:
-      - execute_command: Run shell commands (ls, cat, env, etc.)
-      - write_file: Create/overwrite files in the workspace (params: path, content)
-      - read_file: Read file contents (params: path)
-      - send_file: Send a file from the workspace to the user's chat (params: path, caption)
-
-      IMPORTANT RULES:
-      - For conversational messages (greetings, questions, chitchat), respond with plain text ONLY. Do NOT call any tools.
-      - Only use tools when the user explicitly asks you to read/write files, execute commands, or manage sessions.
-      - Never call tools speculatively or in a loop. If a tool result is sufficient, stop and respond to the user.
-      - When the user asks you to create a file AND send/deliver it, use write_file first, then send_file with the same path.
-      - When the user says "kirim", "send", "deliver", or asks for a file to be sent to them, always use the send_file tool.
-      """
+      content: String.trim(soul_content) <> "\n\n" <> String.trim(tools_content)
     }
 
     # Inject system prompt at the beginning of the messages list

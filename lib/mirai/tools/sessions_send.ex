@@ -19,6 +19,10 @@ defmodule Mirai.Tools.SessionsSend do
         payload: %{
           type: "string",
           description: "The message contents or instructions to send."
+        },
+        node: %{
+          type: "string",
+          description: "Optional. The specific node name to route to (e.g. 'node1@localhost'). If omitted, it will broadcast to all nodes in the mesh."
         }
       },
       required: ["to_agent_id", "payload"]
@@ -26,48 +30,26 @@ defmodule Mirai.Tools.SessionsSend do
   end
 
   @impl true
-  def execute(%{"to_agent_id" => to_agent_id, "payload" => payload}, context) do
+  def execute(%{"to_agent_id" => to_agent_id, "payload" => payload} = params, context) do
     # Generate the struct
     # We grab the current agent id out of context if it exists (or fallback to 'unknown')
     from_agent_id = Map.get(context, :agent_id, "unknown")
     session_id = Map.get(context, :session_id, "unknown")
+    target_node = Map.get(params, "node", nil)
 
-    mesh_msg = Mirai.AgentMesh.Message.new(from_agent_id, session_id, to_agent_id, payload)
+    # Convert node string to atom if provided
+    target_node_atom = if target_node, do: String.to_atom(target_node), else: nil
 
-    # Broadcast or route the message.
-    # Currently for local monolithic operation, we just use a generic local session
-    # key for that agent to wake it up. If using Libcluster, this would map to a PubSub broadcast.
-    target_session_key = "agent:#{to_agent_id}:mesh:direct:global"
+    mesh_msg = Mirai.AgentMesh.Message.new(from_agent_id, session_id, to_agent_id, payload, target_node_atom)
 
-    pid = case Registry.lookup(Mirai.Tools.Registry, {:session, target_session_key}) do
-      [{pid, _}] -> pid
-      [] ->
-        {:ok, new_pid} = DynamicSupervisor.start_child(
-          Mirai.Sessions.Supervisor,
-          {Mirai.Sessions.Worker, [session_key: target_session_key]}
-        )
-        new_pid
+    topic = if target_node_atom do
+      "agent_mesh:#{target_node_atom}"
+    else
+      "agent_mesh:global"
     end
 
-    # Send mock envelope
-    mock_env = %Mirai.Envelope{
-      id: mesh_msg.id,
-      channel: :agent_mesh,
-      chat_id: target_session_key,
-      chat_type: :direct,
-      sender: %{id: from_agent_id, name: "Agent #{from_agent_id}", username: from_agent_id},
-      message: %{
-        id: mesh_msg.id,
-        text: "Incoming AgentMesh Message: #{payload}",
-        attachments: [],
-        reply_to: nil,
-        timestamp: mesh_msg.timestamp
-      },
-      metadata: %{}
-    }
+    Phoenix.PubSub.broadcast(Mirai.PubSub, topic, mesh_msg)
 
-    Mirai.Sessions.Worker.append_message(pid, mock_env)
-
-    {:ok, "Message #{mesh_msg.id} dispatched to #{to_agent_id}"}
+    {:ok, "Message #{mesh_msg.id} dispatched to #{to_agent_id} (Topic: #{topic})"}
   end
 end

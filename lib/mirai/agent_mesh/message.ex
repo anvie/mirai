@@ -31,7 +31,7 @@ defmodule Mirai.AgentMesh.Message do
   @doc """
   Create a new AgentMesh Message struct.
   """
-  def new(from_agent_id, session_id, to_agent_id, payload, context \\ %{}) do
+  def new(from_agent_id, session_id, to_agent_id, payload, to_node \\ nil, context \\ %{}) do
     %__MODULE__{
       id: "amn_#{System.unique_integer([:positive])}",
       from: %{
@@ -42,7 +42,7 @@ defmodule Mirai.AgentMesh.Message do
       to: %{
         agent_id: to_agent_id,
         session_id: nil, # determined at routing time if not provided
-        node: nil
+        node: to_node
       },
       payload: payload,
       context: context,
