@@ -42,25 +42,32 @@ defmodule Mirai.AgentLoop do
         "You are Mirai, an intelligent AI assistant\nKeep your answers concise and helpful. Respond in the same language as the user."
       end
 
-    tools_content =
-      if File.exists?(tools_path) do
-        File.read!(tools_path)
-      else
-        """
-        AVAILABLE TOOLS:
-        - execute_command: Run shell commands (ls, cat, env, etc.)
-        - write_file: Create/overwrite files in the workspace (params: path, content)
-        - read_file: Read file contents (params: path)
-        - send_file: Send a file from the workspace to the user's chat (params: path, caption)
+    builtin_tools_content = """
+    BUILTIN TOOLS:
+    - execute_command: Run shell commands. Example `{"command": "ls -la"}`
+    - write_file: Create/overwrite files in the workspace. Example `{"path": "config.json", "content": "{}"}`
+    - read_file: Read file contents. Example `{"path": "config.json"}`
+    - send_file: Send a file from the workspace to the user's chat. Example `{"path": "image.png", "caption": "Here is the chart"}`
+    - sessions_spawn: Spawn a background subagent to work on a task asynchronously. The subagent runs independently and cannot reply directly to this execution. Example `{"task": "Analyze these logs", "agent_id": "log_expert"}`
+    - sessions_send: Send a message from the current agent to another agent's session asynchronously. You can optionally route to a specific node by supplying `node`, otherwise it defaults to broadcasting to the cluster. Example `{"to_agent_id": "bob", "payload": "Please review this.", "node": "node2@host"}`
 
-        IMPORTANT RULES:
-        - For conversational messages (greetings, questions, chitchat), respond with plain text ONLY. Do NOT call any tools.
-        - Only use tools when the user explicitly asks you to read/write files, execute commands, or manage sessions.
-        - Never call tools speculatively or in a loop. If a tool result is sufficient, stop and respond to the user.
-        - When the user asks you to create a file AND send/deliver it, use write_file first, then send_file with the same path.
-        - When the user says "kirim", "send", "deliver", or asks for a file to be sent to them, always use the send_file tool.
-        """
+    IMPORTANT RULES:
+    - For conversational messages (greetings, questions, chitchat), respond with plain text ONLY. Do NOT call any tools.
+    - Only use tools when the user explicitly asks you to read/write files, execute commands, or manage sessions.
+    - Never call tools speculatively or in a loop. If a tool result is sufficient, stop and respond to the user.
+    - When the user asks you to create a file AND send/deliver it, use write_file first, then send_file with the same path.
+    - When the user says "kirim", "send", "deliver", or asks for a file to be sent to them, always use the send_file tool.
+    """
+
+    user_tools_content =
+      if File.exists?(tools_path) do
+        content = File.read!(tools_path) |> String.trim()
+        if content != "", do: "\n\nUSER CUSTOM TOOLS:\n" <> content, else: ""
+      else
+        ""
       end
+
+    tools_content = String.trim(builtin_tools_content) <> user_tools_content
 
     system_prompt = %{
       role: "system",
