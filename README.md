@@ -16,17 +16,27 @@ Mirai leverages Elixir's unique strengths that no other language can match for A
 
 ### 1. Run the Setup Wizard
 ```bash
-docker run -it --rm -v $(pwd):/app -w /app elixir:1.16 \
-  sh -c "mix local.hex --force && mix local.rebar --force && mix deps.get && mix mirai.setup"
+./mirai setup
 ```
 
 ### 2. Start the Engine
 ```bash
-# Development (hot reload enabled)
-docker-compose up
+# Start primary node in development mode (hot reload enabled)
+./mirai start
 
-# Production
-MIX_ENV=prod docker-compose up
+# Start primary node in production mode
+MIX_ENV=prod ./mirai start
+```
+
+### 3. Node Management
+The `./mirai` script provides a complete cluster management suite:
+```bash
+./mirai spawn worker           # Spawn a new node named "worker"
+./mirai spawn analytics 4001   # Spawn on a custom port
+./mirai ps                     # List all running nodes
+./mirai logs worker            # Tail logs for a specific node
+./mirai shell worker           # Open an IEx remote shell on a node
+./mirai stop                   # Stop and remove all Mirai nodes
 ```
 
 ## Features
