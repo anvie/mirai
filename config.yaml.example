@@ -26,6 +26,11 @@ system:
 agents:
   default_provider: "openrouter"
   max_recursion_depth: 10
+  model_fallback:
+    - provider: "openrouter"
+      model: "anthropic/claude-3.5-sonnet"
+    - provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
 
 mesh:
   node_name: "mirai_primary"

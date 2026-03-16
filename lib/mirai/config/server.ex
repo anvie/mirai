@@ -57,10 +57,21 @@ defmodule Mirai.Config.Server do
     mesh_config = yaml_config["mesh"] || %{}
 
     # 4. Push to Application Env for global access
+    
+    fallback_list = Map.get(agents_config, "model_fallback", [])
+    model_fallback =
+      Enum.map(fallback_list, fn entry ->
+        %{
+          provider: Map.get(entry, "provider"),
+          model: Map.get(entry, "model")
+        }
+      end)
+        
     Application.put_env(:mirai, :workspace_dir, workspace_dir)
     Application.put_env(:mirai, :admin_user_id, admin_user_id)
     Application.put_env(:mirai, :agents,
-      default_provider: Map.get(agents_config, "default_provider", "anthropic")
+      default_provider: Map.get(agents_config, "default_provider", "anthropic"),
+      model_fallback: model_fallback
     )
     Application.put_env(:mirai, :mesh,
       node_name: Map.get(mesh_config, "node_name", "mirai_primary")

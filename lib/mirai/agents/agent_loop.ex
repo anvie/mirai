@@ -99,35 +99,78 @@ defmodule Mirai.AgentLoop do
       []
     end
 
-    openrouter_key = Application.get_env(:mirai, :openrouter_api_key) |> non_blank()
-    anthropic_key = Application.get_env(:mirai, :anthropic_api_key) |> non_blank()
-    default_provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
+    providers_config = Application.get_env(:mirai, :agents)[:model_fallback] || []
+    
+    # If no fallbacks are defined, construct a default fallback list using the existing single-provider approach
+    providers = if Enum.empty?(providers_config) do
+      default_provider = Application.get_env(:mirai, :agents)[:default_provider] || "anthropic"
+      [%{provider: default_provider, model: nil}]
+    else
+      providers_config
+    end
+    
+    try_providers(providers, loop, tools, [])
+  end
+  
+  defp try_providers([], loop, _tools, errors) do
+    require Logger
+    Logger.error("All providers failed. Errors: #{inspect(errors)}")
+    
+    error_msg = "I'm sorry, I was unable to process your request as all configured AI providers failed. " <>
+                "Errors encountered:\n" <> 
+                Enum.map_join(errors, "\n", fn {p, err} -> "- #{p}: #{inspect(err)}" end)
+                
+    {:error, loop, error_msg}
+  end
 
-    result =
-      cond do
-        openrouter_key && default_provider == "openrouter" ->
-          Logger.info("Calling OpenRouter model for agent #{loop.agent_id}...")
-          Mirai.Models.OpenRouter.chat_completion(loop.messages, tools: tools, api_key: openrouter_key)
-
-        anthropic_key && default_provider == "anthropic" ->
-          Logger.info("Calling Anthropic model for agent #{loop.agent_id}...")
-          Mirai.Models.Anthropic.chat_completion(loop.messages, tools: tools, api_key: anthropic_key)
-
-        openrouter_key ->
-          Logger.info("Calling fallback OpenRouter model for agent #{loop.agent_id}...")
-          Mirai.Models.OpenRouter.chat_completion(loop.messages, tools: tools, api_key: openrouter_key)
-
-        true ->
-          Logger.info("Calling fallback Anthropic model for agent #{loop.agent_id}...")
-          Mirai.Models.Anthropic.chat_completion(loop.messages, tools: tools, api_key: anthropic_key)
-      end
+  defp try_providers([provider_config | rest], loop, tools, errors) do
+    require Logger
+    
+    provider_name = provider_config.provider
+    model_override = provider_config.model
+    
+    Logger.info("Attempting model inference using provider: #{provider_name} (Overridden Model: #{inspect(model_override)})")
+    
+    result = case provider_name do
+      "openrouter" ->
+        api_key = Application.get_env(:mirai, :openrouter_api_key) |> non_blank()
+        if api_key do
+          opts = [tools: tools, api_key: api_key]
+          opts = if model_override, do: Keyword.put(opts, :model, model_override), else: opts
+          
+          Mirai.Models.OpenRouter.chat_completion(loop.messages, opts)
+        else
+          {:error, :missing_api_key}
+        end
+        
+      "anthropic" ->
+        api_key = Application.get_env(:mirai, :anthropic_api_key) |> non_blank()
+        if api_key do
+          opts = [tools: tools, api_key: api_key]
+          opts = if model_override, do: Keyword.put(opts, :model, model_override), else: opts
+          
+          Mirai.Models.Anthropic.chat_completion(loop.messages, opts)
+        else
+          {:error, :missing_api_key}
+        end
+        
+      other ->
+        {:error, {:unknown_provider, other}}
+    end
 
     case result do
       {:ok, content_blocks} ->
+        # Record the successful provider and model so that /status and /model slash commands show current runtime info
+        Application.put_env(:mirai, :agents_active_provider, provider_name)
+        if model_override do
+          Application.put_env(:mirai, :agents_active_model, model_override)
+        end
+        
         {:ok, loop, content_blocks}
+        
       {:error, reason} ->
-        Logger.error("Model failure: #{inspect(reason)}")
-        {:error, loop, "I'm sorry, my language model encountered an error: #{inspect(reason)}"}
+        Logger.warning("Provider '#{provider_name}' failed: #{inspect(reason)}. Trying next fallback...")
+        try_providers(rest, loop, tools, [{provider_name, reason} | errors])
     end
   end
 
